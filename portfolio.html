@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedLine Stealer Investigation — Chukwuemeka Oko</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #0f1318;
+    --surface2: #151a22;
+    --border: #1e2733;
+    --accent: #00e5ff;
+    --accent2: #ff3d57;
+    --accent3: #7fff6e;
+    --text: #c8d6e5;
+    --text-dim: #5a6a7e;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* HERO */
+  .hero {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  h1 span { color: var(--accent2); }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    letter-spacing: 1px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .meta-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.15);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  /* TABLES */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,39,51,0.6);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+
+  .data-table tr:hover td { background: rgba(0,229,255,0.02); }
+
+  .data-table td:first-child { color: var(--text-dim); width: 200px; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(0,229,255,0.06);
+    border: 1px solid rgba(0,229,255,0.12);
+    padding: 2px 8px;
+    border-radius: 2px;
+    color: var(--accent);
+  }
+
+  /* TIMELINE */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 0;
+    position: relative;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 159px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .t-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    padding: 16px 24px 16px 0;
+    text-align: right;
+  }
+
+  .t-body {
+    padding: 16px 0 16px 28px;
+    position: relative;
+  }
+
+  .t-body::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 22px;
+    width: 10px; height: 10px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+  }
+
+  .t-event {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .t-desc {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* STEAL LIST */
+  .steal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .steal-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: border-color 0.2s;
+  }
+
+  .steal-item:hover { border-color: rgba(255,61,87,0.4); }
+
+  .steal-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .steal-check {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent3);
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text);
+    overflow-x: auto;
+    margin: 16px 0;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .code-block .comment { color: var(--text-dim); }
+  .code-block .keyword { color: var(--accent); }
+  .code-block .string { color: var(--accent3); }
+  .code-block .value { color: #ffcf6e; }
+
+  /* FINDING CARDS */
+  .finding-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .finding-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .finding-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+  }
+
+  .finding-card.red::after { background: var(--accent2); }
+  .finding-card.blue::after { background: var(--accent); }
+  .finding-card.green::after { background: var(--accent3); }
+
+  .card-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-bottom: 10px;
+  }
+
+  .card-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .card-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* SCREENSHOT PLACEHOLDERS */
+  .screenshot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .screenshot-box {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 2px;
+    aspect-ratio: 16/9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.2s;
+    cursor: default;
+  }
+
+  .screenshot-box:hover { border-color: var(--accent); border-style: solid; }
+
+  .ss-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .ss-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .ss-tool {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .ss-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.6;
+    max-width: 240px;
+  }
+
+  /* TOOLS BADGES */
+  .tools-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .tool-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 2px;
+    border: 1px solid;
+    letter-spacing: 1px;
+  }
+
+  .tool-badge.cyan { color: var(--accent); border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.06); }
+  .tool-badge.red { color: var(--accent2); border-color: rgba(255,61,87,0.3); background: rgba(255,61,87,0.06); }
+  .tool-badge.green { color: var(--accent3); border-color: rgba(127,255,110,0.3); background: rgba(127,255,110,0.06); }
+  .tool-badge.yellow { color: #ffcf6e; border-color: rgba(255,207,110,0.3); background: rgba(255,207,110,0.06); }
+
+  /* CONCLUSION BOX */
+  .conclusion-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent2);
+    padding: 28px 32px;
+    margin-top: 8px;
+  }
+
+  .conclusion-box p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .conclusion-box p:last-child { margin-bottom: 0; }
+
+  .highlight { color: var(--accent); font-family: var(--mono); }
+  .highlight-red { color: var(--accent2); font-weight: 700; }
+
+  /* NEXT TASK */
+  .next-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    padding: 24px 28px;
+    margin-top: 8px;
+  }
+
+  .next-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .next-url {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .next-desc {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .next-why {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent3);
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 4px;
+    line-height: 1.8;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .screenshot-grid { grid-template-columns: 1fr; }
+    .timeline-item { grid-template-columns: 120px 1fr; }
+    .timeline-item::before { left: 119px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="wrap">
+  <section class="hero">
+    <div class="badge">Incident Report · Exercise 2024-10-23</div>
+    <h1>RedLine Stealer<br><span>Investigation</span></h1>
+    <p class="subtitle">// Network Forensics · PCAP Analysis · Threat Intelligence</p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <span class="meta-label">Analyst</span>
+        <span class="meta-value">Chukwuemeka Oko</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Date</span>
+        <span class="meta-value">March 30, 2026</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Source</span>
+        <span class="meta-value">Malware-Traffic-Analysis.net</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Malware</span>
+        <span class="meta-value" style="color:var(--accent2)">RedLine Stealer</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- TOOLS -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">00</span>
+      <h2>Tools Used</h2>
+    </div>
+    <div class="tools-row">
+      <span class="tool-badge cyan">Wireshark</span>
+      <span class="tool-badge red">Zui / Brim</span>
+      <span class="tool-badge green">VirusTotal</span>
+      <span class="tool-badge yellow">7-Zip</span>
+    </div>
+  </section>
+</div>
+
+<!-- KEY FINDINGS -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>Key Findings at a Glance</h2>
+    </div>
+    <div class="finding-cards">
+      <div class="finding-card red">
+        <div class="card-title">Victim Internal IP</div>
+        <div class="card-value">10.10.23.101</div>
+        <div class="card-sub">Machine: user1 · HP Device</div>
+      </div>
+      <div class="finding-card blue">
+        <div class="card-title">C2 Server</div>
+        <div class="card-value">188.190.10.10</div>
+        <div class="card-sub">Port 55123 · Direct IP · No domain</div>
+      </div>
+      <div class="finding-card green">
+        <div class="card-title">Data Exfiltrated</div>
+        <div class="card-value">~2.7 MB</div>
+        <div class="card-sub">9 data categories stolen</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- VICTIM -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>Victim Machine</h2>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Detail</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Internal IP</td><td><code>10.10.23.101</code></td></tr>
+        <tr><td>Public IP</td><td><code>173.66.46.112</code></td></tr>
+        <tr><td>Machine Name</td><td><code>user1</code></td></tr>
+        <tr><td>MAC Address</td><td><code>00:08:02:1c:47:ae</code></td></tr>
+        <tr><td>Hardware ID</td><td><code>AB19D0C6238A3F7F9AA2AF4B49C50704</code></td></tr>
+        <tr><td>Device Brand</td><td>Hewlett-Packard</td></tr>
+        <tr><td>OS Language</td><td>English (United States)</td></tr>
+        <tr><td>Country</td><td>United States</td></tr>
+      </tbody>
+    </table>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:16px;">
+      📸 PLACE SCREENSHOT HERE → Zui query result showing 10.10.23.101 with highest connection count
+    </p>
+  </section>
+</div>
+
+<!-- ATTACKER -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>Attacker Infrastructure</h2>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Detail</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>C2 IP Address</td><td><code>188.190.10.10</code></td></tr>
+        <tr><td>C2 Port</td><td><code>55123</code> (non-standard — red flag)</td></tr>
+        <tr><td>Protocol</td><td>HTTP over SOAP/XML</td></tr>
+        <tr><td>Server</td><td>Microsoft-HTTPAPI/2.0</td></tr>
+        <tr><td>C2 Domain</td><td style="color:var(--text-dim);">None — direct IP communication</td></tr>
+        <tr><td>Secondary IP</td><td><code>104.26.13.31</code> (api.ip.sb — victim IP check)</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block" style="margin-top:20px;">
+      <span class="comment">// C2 communication observed in TCP Stream — 3 SOAP actions</span><br>
+      <span class="keyword">SOAPAction:</span> <span class="string">"CheckConnect"</span>     <span class="comment">→ Malware check-in ("Are you there?")</span><br>
+      <span class="keyword">SOAPAction:</span> <span class="string">"EnvironmentSettings"</span> <span class="comment">→ C2 sends steal instructions</span><br>
+      <span class="keyword">SOAPAction:</span> <span class="string">"SetEnvironment"</span>    <span class="comment">→ Victim uploads stolen data (~2.7 MB)</span>
+    </div>
+  </section>
+</div>
+
+<!-- INFECTION VECTOR -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>Initial Infection Vector</h2>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Detail</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Delivery File</td><td><code>QUOTATION_08670.TAR</code></td></tr>
+        <tr><td>Actual Format</td><td>RAR archive <span style="color:var(--accent2);">(file extension mismatch!)</span></td></tr>
+        <tr><td>Payload Inside</td><td><code>QUOTATION#08670.exe</code> (915 KB)</td></tr>
+        <tr><td>Disguise</td><td>Fake business quotation document</td></tr>
+        <tr><td>Execution Path</td><td><code>C:\Windows\Microsoft.NET\Framework\v4.0.30319\RegSvcs.exe</code></td></tr>
+        <tr><td>Technique</td><td>Process injection into legitimate Windows process</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<!-- TIMELINE -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Attack Timeline</h2>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="t-time">Before capture</div>
+        <div class="t-body">
+          <div class="t-event">Victim Executes Malware</div>
+          <div class="t-desc">QUOTATION#08670.exe opened, injects into RegSvcs.exe</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="t-time">19:15:32 UTC</div>
+        <div class="t-body">
+          <div class="t-event">C2 CheckConnect Handshake</div>
+          <div class="t-desc">Malware calls home → C2 replies: CheckConnectResult = true</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="t-time">19:15:37 UTC</div>
+        <div class="t-body">
+          <div class="t-event">Steal Instructions Received</div>
+          <div class="t-desc">EnvironmentSettings XML → 9 data categories targeted</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="t-time">19:15:38 UTC</div>
+        <div class="t-body">
+          <div class="t-event">Public IP Discovery</div>
+          <div class="t-desc">Malware queries api.ip.sb → discovers victim public IP: 173.66.46.112</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="t-time">19:15:48 UTC</div>
+        <div class="t-body">
+          <div class="t-event" style="color:var(--accent2);">Data Exfiltration — 2.7 MB</div>
+          <div class="t-desc">SetEnvironment POST → Content-Length: 2786973 bytes stolen</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- WHAT WAS STOLEN -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>Data Exfiltrated</h2>
+    </div>
+    <div class="steal-grid">
+      <div class="steal-item">
+        <span class="steal-icon">🌐</span>
+        Browser Credentials
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">💬</span>
+        Discord Tokens
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">📁</span>
+        FTP Credentials
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">📄</span>
+        Local Files (wallets/seeds)
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">🖥️</span>
+        Screen Screenshot
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">🎮</span>
+        Steam Session
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">✈️</span>
+        Telegram Session
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">🔐</span>
+        VPN Credentials
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+      <div class="steal-item">
+        <span class="steal-icon">💰</span>
+        Crypto Wallets
+        <span class="steal-check">✓ STOLEN</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- SCREENSHOTS GUIDE -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2>Evidence Screenshots</h2>
+    </div>
+    <div class="screenshot-grid">
+      <div class="screenshot-box">
+        <div class="ss-num">SS-01 · ZUI</div>
+        <div class="ss-label">Victim IP Discovery</div>
+        <div class="ss-tool">Zui/Brim</div>
+        <div class="ss-note">Query: _path=="conn" | count() by id.orig_h | sort -r count<br>Shows 10.10.23.101 at top</div>
+      </div>
+      <div class="screenshot-box">
+        <div class="ss-num">SS-02 · ZUI</div>
+        <div class="ss-label">DNS Query Activity</div>
+        <div class="ss-tool">Zui/Brim</div>
+        <div class="ss-note">Query: _path=="dns" | count() by query<br>Shows api.ip.sb lookup</div>
+      </div>
+      <div class="screenshot-box">
+        <div class="ss-num">SS-03 · WIRESHARK</div>
+        <div class="ss-label">HTTP Traffic to C2</div>
+        <div class="ss-tool">Wireshark — Filter: http</div>
+        <div class="ss-note">Shows POST requests to 188.190.10.10:55123</div>
+      </div>
+      <div class="screenshot-box">
+        <div class="ss-num">SS-04 · WIRESHARK</div>
+        <div class="ss-label">TCP Stream — CheckConnect</div>
+        <div class="ss-tool">Follow → TCP Stream</div>
+        <div class="ss-note">Shows CheckConnect + 200 OK + EnvironmentSettings headers</div>
+      </div>
+      <div class="screenshot-box">
+        <div class="ss-num">SS-05 · WIRESHARK</div>
+        <div class="ss-label">Victim Details in Stream</div>
+        <div class="ss-tool">TCP Stream — scroll down</div>
+        <div class="ss-note">Shows MachineName>user1 and IPv4>173.66.46.112 in XML</div>
+      </div>
+      <div class="screenshot-box">
+        <div class="ss-num">SS-06 · WIRESHARK</div>
+        <div class="ss-label">Data Exfiltration</div>
+        <div class="ss-tool">TCP Stream — scroll down</div>
+        <div class="ss-note">Shows SetEnvironment POST with Content-Length: 2786973</div>
+      </div>
+    </div>
+    <div class="screenshot-box" style="margin-top:16px; aspect-ratio:auto; padding:24px;">
+      <div class="ss-num">SS-07 · VIRUSTOTAL</div>
+      <div class="ss-label">C2 IP Confirmed Malicious</div>
+      <div class="ss-tool">virustotal.com → search 188.190.10.10</div>
+      <div class="ss-note">Shows detection flags from multiple AV engines confirming malicious classification</div>
+    </div>
+  </section>
+</div>
+
+<!-- CONCLUSION -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2>Conclusion</h2>
+    </div>
+    <div class="conclusion-box">
+      <p>
+        Host <span class="highlight">10.10.23.101</span> (machine: <span class="highlight">user1</span>) was infected with
+        <span class="highlight-red">RedLine Stealer</span> after executing a malicious file
+        disguised as a business quotation archive. The malware injected itself into the legitimate
+        Windows process <span class="highlight">RegSvcs.exe</span> to evade detection.
+      </p>
+      <p>
+        It established communication with C2 server <span class="highlight">188.190.10.10:55123</span>
+        using SOAP/XML over HTTP — a format normally associated with legitimate enterprise software —
+        and successfully exfiltrated approximately <span class="highlight-red">2.7 MB</span> of sensitive
+        user data including browser credentials, cryptocurrency wallets, and session tokens.
+      </p>
+      <p style="color:var(--text-dim); font-family:var(--mono); font-size:12px; border-top:1px solid var(--border); padding-top:16px; margin-top:8px; margin-bottom:0;">
+        ⚡ Historical Note: The RedLine Stealer operation was taken down by the FBI, Dutch National Police,
+        and Eurojust on October 28, 2024 — just 5 days after this infection — in Operation Magnus.
+      </p>
+    </div>
+  </section>
+</div>
+
+<!-- NEXT TASK RECOMMENDATION -->
+<div class="wrap">
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <h2>Recommended Next Exercise</h2>
+    </div>
+    <div class="next-card">
+      <div class="next-title">🎯 2025-01-22 — Download from Fake Software Site</div>
+      <div class="next-url">malware-traffic-analysis.net/2025/01/22/index.html</div>
+      <div class="next-desc">
+        A victim clicks a malicious Google/Bing ad → lands on a fake software download page →
+        downloads what appears to be a legitimate installer → the machine is infected with an
+        infostealer delivered via obfuscated PowerShell scripts. This exercise introduces
+        <strong>DNS-based C2</strong> (you'll find actual domain names this time),
+        <strong>HTTPS traffic analysis</strong>, and <strong>PowerShell obfuscation</strong>
+        — all real-world techniques you didn't encounter in the RedLine exercise.
+      </div>
+      <div class="next-why">
+        Why this builds on your RedLine skills:<br>
+        ✓ You already know how to find the victim IP and C2 server<br>
+        ✓ This adds: C2 domain identification (the question RedLine couldn't answer)<br>
+        ✓ This adds: Reading HTTPS traffic indicators (TLS SNI, certificates)<br>
+        ✓ This adds: Understanding malvertising as an infection vector<br>
+        ✓ Difficulty level: Beginner → Intermediate (perfect next step)
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    Chukwuemeka Oko · Cybersecurity Portfolio · Network Forensics · 2026
+  </div>
+</footer>
+
+</body>
+</html>
